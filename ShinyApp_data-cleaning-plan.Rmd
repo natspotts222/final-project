@@ -1,0 +1,282 @@
+---
+title: "Data Cleaning Plan"
+author: "Natalie Pottschmidt"
+date: "3/31/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = F, warning = F)
+```
+
+# Initial Cleaning
+
+- First course of treatment only
+- Individual appointments only
+- At least 2 appointments
+- At least 2 CCAPS administrations
+
+# Dependent/Outcome Variables
+
+## Post-Treatment CCAPS Subscale Scores
+
+- Distress Index
+- Depression
+- Generalized Anxiety
+- Social Anxiety
+- Academic Distress
+- Eating Concerns
+- Hostility
+- Alcohol Use
+
+**Within the first treatment course, get CCAPS-34 subscale scores for the last administration of the CCAPS for each client.**
+
+### Visualization with Subscale Scores
+
+- Present data points on a scatter plot
+- Present averages on a bar plot
+
+**Use CCMHr package to calculate high- and low-cut variables to include as markers on the plots**
+
+## Pre-to-post Symptom Change
+
+**Calculate change scores in CCAPS-34 subscale scores: last - first**
+
+- To make this a more valid outcome, could...
+    - Mandate initial subscale scores as a predictor
+    - Create subgroups of clients based on which category they fit into at baseline (i.e., low, moderate, or high)
+    
+## Number of Sessions
+
+**Within the first treatment course, get a variable summing up attended individual appointments**
+
+## Percentage of attended appointments
+
+**Use the number of attended individual appointments variable above, divided by total number of individual appointment lines, regardless of attendance**
+
+# Predictor variables
+
+## Demographics
+
+### Age
+
+Continuous SDS variable: client age (#25)
+
+- Use as-is, screen for NAs or weirdly generated ages like 99
+
+### Gender
+
+Categorical SDS variable: client gender identity (#88)
+
+- Create factor: 
+    - 1 - Woman
+    - 2 - Man
+    - 3 - Transgender
+    - 4 - Other
+
+### Sexuality
+
+Categorical SDS variable: client sexuality (#91)
+
+- Create factor: 
+    - 1 - Heterosexual/Straight
+    - 2/3 - Lesbian/Gay (Homosexual)
+    - 4 - Bisexual
+    - 5 - Questioning
+    - 6 - Other
+
+### Race/Ethnicity
+
+Categorical SDS variable: client race/ethnicity (#95)
+
+- Create factor: 
+    - 1 - African American/Black
+    - 2 - American Indian or Alaskan Native
+    - 3 - Asian American/Asian
+    - 4 - Hispanic/Latinx
+    - 5 - Native Hawaiian or Pacific Islander
+    - 6 - Multi-Racial
+    - 7 - White
+    - 8 - Other
+- Create minority factor: 
+    - 0 - White
+    - 1 - Non-White (Minority)
+
+## Mental Health History
+
+### Prior counseling
+Categorical SDS variable: "Attended counseling for mental health concerns" (#1)
+- Create factor: 1 - Never
+                 2 - Prior to college
+                 3 - After starting college
+                 4 - Both
+- Create dichotomous factor: 0 - Never
+                             1 - Sometime
+       
+### Prior medication use
+Categorical SDS variable: "Taken a prescribed medication for mental health concerns" (#2)
+
+- Create factor: 
+    - 1 - Never
+    - 2 - Prior to college
+    - 3 - After starting college
+    - 4 - Both
+- Create history factor: 
+    - 0 - Never
+    - 1 - Past (2+4)
+    - 2 - Recent Past or Present (3+4)
+                             
+### Prior hospitalization
+Categorical SDS variable: "Been hospitalized for mental health concerns" (#64 - how many times)
+
+- Create factor: 
+    - 1 - Never
+    - 2 - 1 time
+    - 3 - 2-3 times
+    - 4 - 4-5 times
+    - 5 - More than 5 times
+- Create dichotomous factor: 
+    - 0 - Never
+    - 1 - Sometime
+                             
+### Prior self-injury
+Categorical SDS variable: "Purposefully injured yourself without suicidal intent (e.g., cutting, hitting, burning, etc.)" (#72 - how many times)
+
+- Create factor: 
+    - 1 - Never
+    - 2 - 1 time
+    - 3 - 2-3 times
+    - 4 - 4-5 times
+    - 5 - More than 5 times
+- Create dichotomous factor: 
+    - 0 - Never
+    - 1 - Sometime
+                             
+### Prior suicidal ideation
+Categorical SDS variable: "Seriously considered attempting suicide" (#74 - How many times)
+
+- Create factor: 
+    - 1 - Never
+    - 2 - 1 time
+    - 3 - 2-3 times
+    - 4 - 4-5 times
+    - 5 - More than 5 times
+- Create dichotomous factor: 
+    - 0 - Never
+    - 1 - Sometime
+
+### Prior suicide attempt
+Categorical SDS variable: "Made a suicide attempt" (#76 - How many times)
+
+- Create factor: 
+    - 1 - Never
+    - 2 - 1 time
+    - 3 - 2-3 times
+    - 4 - 4-5 times
+    - 5 - More than 5 times
+- Create dichotomous factor: 
+    - 0 - Never
+    - 1 - Sometime
+
+## Initial Psychological Symptom Severity
+
+### CCAPS-34 Subscales
+Continuous score: Use variables as-is
+
+Categorical ranking: Use high-and low-cut variables to determine whether a client's subscale score falls:
+    
+- 0 - below the low-cut
+- 1 - between low- and high-cut
+- 2 - above the high-cut
+    
+### CCAPS-34 Single Items
+51: "I have thoughts of ending my life."
+68: "I have thoughts of hurting others."
+  
+- Likert-type items, create factor: 
+    - 0 - Not at all like me
+    - 1 - 1
+    - 2 - 2
+    - 3 - 3
+    - 4 - Extremely like me
+- Create ranking factor: 
+    - 0 - No/mild (0/1)
+    - 1 - Moderate (2)
+    - 2 - Severe (3/4)
+                       
+## Presenting Concerns, per Clinician Report
+
+### Number of presenting concerns
+
+Continuous variable: calculate sum across CLICC_01_*
+
+# Subsetting variables
+
+Option to look only at a specific population within the dataset, with the same predictor variable options and outcomes as above
+
+## Top Concern, per Clinician Report
+Categorical variable: CLICC_03
+
+Create factor: 
+
+- 1 - Anxiety (1 + 1101 + 1102 + 1103 + 1104 + 1105 + 1106)
+- 2 - Obsessions or compulsions
+- 3 - Perfectionism
+- 4 - Stress
+- 5 - Depression
+- 1006 - Mood instability (bipolar symptoms)
+- 46 - Emotion dysregulation
+- 7 - Anger management
+- 8 - Relationship problem (specific)
+- 9 - Interpersonal functioning
+- 10 - Social isolation
+- 11 - Family
+- 12 - Grief/loss
+- 13 - Health/medical
+- 14 - Eating/body image
+- 15 - Sleep
+- 16 - Sexual concern
+- 17 - Pregnancy related
+- 18 - Identity development
+- 19 - Self-esteem/confidence
+- 20 - Adjustment to new environment
+- 21 - Racial, ethnic, or cultural concerns
+- 22 - Sexual orientation
+- 23 - Gender identity
+- 24 - Religion/spirituality
+- 25 - Discrimination
+- 26 - Academic performance
+- 27 - Career
+- 1028 - Attention/concentration difficulties
+- 47 - Autism spectrum
+- 48 - Learning disorder/disability
+- 29 - Alcohol
+- 30 - Drugs
+- 31 - Addiction (not drugs/alcohol)
+- 32 - Self-injurious thoughts or behaviors
+- 33 - Suicidality
+- 34 - Violent thoughts or behaviors toward others
+- 35 - Psychotic thoughts or behaviors
+- 49 - Dissociative experiences
+- 36 - Trauma
+                 37 - Phyiscal abuse/assault (victim)
+                 38 - Sexual abuse/assault (victim)
+                 39 - Harassment/emotional abuse (victim)
+                 40 - Stalking (victim)
+                 41 - Financial
+                 42 - Legal/judicial/conduct
+                 43 - None
+                 44 - Other
+
+## Presenting concern, any
+Categorical variables (0/1) CLICC_01_*
+
+## Race/Ethnicity
+See above, predictor variables
+
+
+
+
+
+
+
