@@ -60,7 +60,7 @@ TI1719_select <- select(TI1719_courses, UniqueClientID,
                        Depression34:DI,
                        contains("CLICC_"), contains("SDS_"))
 
-    # rm(TI1719_courses)
+rm(TI1719_courses)
 
 #### 3. Separate first lines of CLICC and SDS for each client ####
 ## CLICC
@@ -219,21 +219,24 @@ CCAPSappt <- filter(match_dates, Is_ValidCCAPS == 1) %>%
   arrange(UniqueClientID, Date) %>%
   group_by(UniqueClientID) %>%
   slice(1, n()) %>%
-  mutate (CCAPS_admin = c("first","last")) %>%
+  mutate(CCAPS_admin = c("first","last"),
+         pre_SI = CCAPS_51[1],
+         pre_HI = CCAPS_68[1]) %>%
   ungroup() %>%
-  select(UniqueClientID, ClientAge, num_appt_attended, attend_rate, CCAPS_admin, CCAPS_51:DI)
+  select(-c(CCAPS_51, CCAPS_68))
 
 #### 13. Operationalize CCAPS subscale scores: Change score (post-pre) ####
-CCAPSappt <- group_by(CCAPSappt, UniqueClientID) %>%
-  mutate(d_Depression34 = Depression34[2] - Depression34[1],
-         d_Anxiety34 = Anxiety34[2] - Anxiety34[1],
-         d_Social_Anxiety34 = Social_Anxiety34[2] - Social_Anxiety34[1],
-         d_Academics34 = Academics34[2] - Academics34[1],
-         d_Eating34 = Eating34[2] - Eating34[1],
-         d_Hostility34 = Hostility34[2] - Hostility34[1],
-         d_Alcohol34 = Alcohol34[2] - Alcohol34[1],
-         d_DI = DI[2] - DI[1]) %>%
-  ungroup()
+    # Will calculate later instead
+#CCAPSappt <- group_by(CCAPSappt, UniqueClientID) %>%
+#  mutate(d_Depression34 = Depression34[2] - Depression34[1],
+#         d_Anxiety34 = Anxiety34[2] - Anxiety34[1],
+#         d_Social_Anxiety34 = Social_Anxiety34[2] - Social_Anxiety34[1],
+#         d_Academics34 = Academics34[2] - Academics34[1],
+#         d_Eating34 = Eating34[2] - Eating34[1],
+#         d_Hostility34 = Hostility34[2] - Hostility34[1],
+#         d_Alcohol34 = Alcohol34[2] - Alcohol34[1],
+#         d_DI = DI[2] - DI[1]) %>%
+#  ungroup()
 
 #### 14. Use CCMHr package to create high- and low-cut variables ####
 # 15. Create CCAPS subscale score ranking variables based on high and low cuts
@@ -242,43 +245,111 @@ CCAPSappt <- group_by(CCAPSappt, UniqueClientID) %>%
 ## above the low cut and above the hi cut
 CCAPSappt_cuts <- CCMHr::ccaps34_cuts(CCAPSappt)
 
-## To combine the above information in a useful way, below creates a variable as follows:
+## To combine the above cut information in a useful way, below creates a variable as follows:
     ## 0 - mild: below low cut (low = 0)
     ## 1 - moderate: above low cut, below high cut (low = 1, high = 0)
     ## 2 - severe: above high cut (high = 1)
 
 CCAPSappt_cuts <- mutate(CCAPSappt_cuts,
-                         Depression_cut = depression_low_cut34 + depression_hi_cut34,
-                         Anxiety_cut = anxiety_low_cut34 + anxiety_hi_cut34,
-                         Social_anxiety_cut = social_anxiety_low_cut34 + social_anxiety_hi_cut34,
-                         Academics_cut = academics_low_cut34 + academics_hi_cut34,
-                         Eating_cut = eating_low_cut34 + eating_hi_cut34,
-                         Hostility_cut = hostility_low_cut34 + hostility_hi_cut34,
-                         Alcohol_cut = alcohol_low_cut34 + alcohol_hi_cut34,
-                         DI_cut = DI_low_cut + DI_hi_cut)
-CCAPSappt_cuts <- select(CCAPSappt_cuts, -c(depression_low_cut34:DI_hi_cut))
+                         Depression34.Severity = (depression_low_cut34 + depression_hi_cut34),
+                         Anxiety34.Severity = (anxiety_low_cut34 + anxiety_hi_cut34),
+                         SocialAnxiety34.Severity = (social_anxiety_low_cut34 + social_anxiety_hi_cut34),
+                         Academics34.Severity = (academics_low_cut34 + academics_hi_cut34),
+                         Eating34.Severity = (eating_low_cut34 + eating_hi_cut34),
+                         Hostility34.Severity = (hostility_low_cut34 + hostility_hi_cut34),
+                         Alcohol34.Severity = (alcohol_low_cut34 + alcohol_hi_cut34),
+                         DI.Severity = (DI_low_cut + DI_hi_cut)) %>%
+  select(UniqueClientID, ClientAge, num_appt_attended, attend_rate, CCAPS_admin, pre_SI:pre_HI,
+         Depression34.Score = Depression34,
+         Anxiety34.Score = Anxiety34,
+         SocialAnxiety34.Score = Social_Anxiety34,
+         Academics34.Score = Academics34,
+         Eating34.Score = Eating34,
+         Hostility34.Score = Hostility34,
+         Alcohol34.Score = Alcohol34,
+         DI.Score = DI,
+         Depression34.Severity:DI.Severity)
 
-rm(TI1719_apptCCAPS, TI1719_select, combined, dates, match_dates, CCAPSappt)
+
+## Elongate the data
+CCAPSappt_long <- CCAPSappt_cuts %>%
+  gather(key = "Subscale.Type", value = "Value", c(Depression34.Score:DI.Severity)) %>%
+  separate(Subscale.Type, into = c("Subscale", "ScoreType")) %>%
+  unite(temp, ScoreType, CCAPS_admin) %>%
+  spread(key = "temp", value = "Value") %>%
+  mutate(change_score = Score_last - Score_first) %>%
+  arrange(UniqueClientID)
+
+CCAPSappt_long$Severity_first <- factor(CCAPSappt_long$Severity_first, levels = 0:2,
+                                  labels = c("Low", "Medium", "High"))
+CCAPSappt_long$Severity_last <- factor(CCAPSappt_long$Severity_last, levels = 0:2,
+                                        labels = c("Low", "Medium", "High"))
+
+## Create static variables for the CCAPS subscale low/high cuts and the reliable change index
+CCAPSappt_long <- mutate(CCAPSappt_long, 
+                         lowCut = dplyr::recode(Subscale,
+                                                Depression34 = "1.00",
+                                                Anxiety34 = "1.33",
+                                                SocialAnxiety34 = "1.40",
+                                                Academics34 = "1.25",
+                                                Eating34 = "0.96",
+                                                Hostility34 = "0.84",
+                                                Alcohol34 = "0.60",
+                                                DI = "1.30"),
+                         highCut = dplyr::recode(Subscale,
+                                                Depression34 = "1.83",
+                                                Anxiety34 = "2.10",
+                                                SocialAnxiety34 = "2.50",
+                                                Academics34 = "2.50",
+                                                Eating34 = "1.50",
+                                                Hostility34 = "1.17",
+                                                Alcohol34 = "1.10",
+                                                DI = "2.25"),
+                         RCI = dplyr::recode(Subscale,
+                                                Depression34 = "1.05",
+                                                Anxiety34 = "1.07",
+                                                SocialAnxiety34 = "1.09",
+                                                Academics34 = "1.38",
+                                                Eating34 = "1.34",
+                                                Hostility34 = "0.98",
+                                                Alcohol34 = "1.12",
+                                                DI = "0.79"))
 
 #### 16. Operationalize single CCAPS items: full-scale factor + ranking factor  ####
 #     a. 51 - "I have thoughts of ending my life."
 #     b. 68 - "I have thoughts of hurting others."
 
 ## Factor item 51
-CCAPSappt_cuts$CCAPS_51 <- as.factor(CCAPSappt_cuts$CCAPS_51)
+CCAPSappt_long$pre_SI <- as.factor(CCAPSappt_long$pre_SI)
 
 ## Factor for level of suicidal ideation, making either 3 or 4 "extreme"
-CCAPSappt_cuts$SI_level <- factor(CCAPSappt_cuts$CCAPS_51,
+CCAPSappt_long$SI_level <- factor(CCAPSappt_long$pre_SI,
                                   levels = 0:4,
                                   labels = c("none", "mild", "moderate", "extreme", "extreme"))
 
 ## Factor item 68
-CCAPSappt_cuts$CCAPS_68 <- as.factor(CCAPSappt_cuts$CCAPS_68)
+CCAPSappt_long$pre_HI <- as.factor(CCAPSappt_long$pre_HI)
 
 ## Factor for level of homicidal ideation, making either 3 or 4 "extreme"
-CCAPSappt_cuts$HI_level <- factor(CCAPSappt_cuts$CCAPS_68,
+CCAPSappt_long$HI_level <- factor(CCAPSappt_long$pre_HI,
                                   levels = 0:4,
                                   labels = c("none", "mild", "moderate", "extreme", "extreme"))
+
+
+### Additionally, clean up ClientAge variable and make a factor version for initial in-app visualizations
+CCAPSappt_long$ClientAge[CCAPSappt_long$ClientAge == 99] <- NA
+
+CCAPSappt_long <- mutate(CCAPSappt_long, ClientAgeGroups = factor(ClientAge,
+                                                                  levels = c(18:60),
+                                                                  labels = c("18-22", "18-22", "18-22", "18-22", "18-22",
+                                                                             "23-29", "23-29", "23-29", "23-29", "23-29", "23-29", "23-29", 
+                                                                             "30-39", "30-39", "30-39", "30-39", "30-39",
+                                                                             "30-39", "30-39", "30-39", "30-39", "30-39",
+                                                                             "40-49", "40-49", "40-49", "40-49", "40-49",
+                                                                             "40-49", "40-49", "40-49", "40-49", "40-49",
+                                                                             "50+", "50+", "50+", "50+", "50+",
+                                                                             "50+", "50+", "50+", "50+", "50+", "50+")))
+
 
 #### 17. Keep/operationalize SDS items: ####
 SDS <- select(SDS_slice, UniqueClientID,
@@ -289,9 +360,9 @@ SDS <- mutate(SDS, Gender = factor(SDS_88, levels = 1:4,
                                    labels = c("Woman", "Man", "Transgender", "Other")))
 
 #     c. 91 - Sexuality (factor)
-SDS <- mutate(SDS, Sexuality = factor(SDS_91, levels = 1:6,
+SDS <- mutate(SDS, Sexuality = factor(SDS_91, levels = c(1:6, 1001),
                                    labels = c("Heterosexual", "Homosexual", "Homosexual",
-                                              "Bisexual", "Questioning", "Other")))
+                                              "Bisexual", "Questioning", "Other", "Heterosexual")))
 
 #     d. 95 - Race/Ethnicity (factor + minority factor)
 SDS <- mutate(SDS, Race_Ethnicity = factor(SDS_95, levels = 1:8,
@@ -359,6 +430,9 @@ SDS <- mutate(SDS, PriorAttempt = factor(SDS_76, levels = 1:5,
               PriorAttempt_yn = factor(SDS_76, levels = 1:5,
                                         labels = c("No", "Yes", "Yes", "Yes", "Yes")))
 
+## Remove original (unfactored) SDS variables
+SDS <- select(SDS, -c(SDS_01:SDS_95))
+
 #### 18. Keep/operationalize CLICC items: ####
 #     a. CLICC_01_*
 CLICC <- mutate(CLICC_slice,
@@ -422,7 +496,11 @@ CLICC <- mutate(CLICC_slice,
 CLICC <- mutate(CLICC, NumConcerns = rowSums(CLICC[2:55]))
 
 CLICC_long <- gather(CLICC, key = Concern, value = Checked,
-                     Anxiety:Other)
+                     Anxiety:Other) %>%
+  filter(Checked == 1) %>%    # Removes unnecessary rows, all possible concerns that aren't checked for a given client
+  select(-Checked)
+
+CLICC_long$Concern <- as.factor(CLICC_long$Concern)
 
 #     c. CLICC_03 - Create factor
 CLICC_long <- mutate(CLICC_long, 
@@ -449,11 +527,21 @@ CLICC_long <- mutate(CLICC_long,
                                                     "Learning_disability", "Dissociation",
                                                     "Mood_instability", "Attention",
                                                     "Generalized_anx", "Social_anx",
-                                                    "Panic", "Test_anx", "Phobia", "Other_anx"))) %>%
-  CLICC_long <- CLICC_long %>% select(-CLICC_03) %>%
+                                                    "Panic", "Test_anx", "Phobia", "Other_anx"))) %>% 
+  select(-CLICC_03) %>%
   arrange(UniqueClientID)
 
-#### 19. Full-join appointment/CCAPS + SDS + CLICC variables ####
+## Factor for number of concern groups - for initial app visualizations
+CLICC_long <- mutate(CLICC_long, NumConcernsGroups = factor(NumConcerns,
+                                                            levels = c(1:26, 28:30),
+                                                            labels = c("1", "2-4", "2-4", "2-4",
+                                                                       "5-9", "5-9", "5-9", "5-9", "5-9",
+                                                                       "10-19", "10-19", "10-19", "10-19", "10-19",
+                                                                       "10-19", "10-19", "10-19", "10-19", "10-19",
+                                                                       "20+", "20+", "20+", "20+", "20+",
+                                                                       "20+", "20+", "20+", "20+", "20+")))
+
+#### 19. Inner-join appointment/CCAPS + SDS + CLICC variables ####
 
 ## All outcome variables are in the CCAPSappt_cuts dataset, so these must exist in all 
 ## combined datasets. Some predictors are also in the outcomes dataset, so it's included
@@ -461,17 +549,17 @@ CLICC_long <- mutate(CLICC_long,
 ## be possible to choose datasets in order to maximize inclusion...
 
 ## The first is simply the finished CCAPS/appt dataset from above.
-Outcomes_CCAPSpred <- CCAPSappt_cuts
+Outcomes_CCAPSpred <- CCAPSappt_long
 
 n_distinct(Outcomes_CCAPSpred$UniqueClientID) # n = 69846
 
 ## The first includes SDS predictors:
-Outcomes_SDSpred <- inner_join(CCAPSappt_cuts, SDS)
+Outcomes_SDSpred <- inner_join(CCAPSappt_long, SDS)
 
 n_distinct(Outcomes_SDSpred$UniqueClientID) # n = 62069
 
 ## The second includes CLICC predictors (long form):
-Outcomes_CLICCpred <- inner_join(CCAPSappt_cuts, CLICC_long)
+Outcomes_CLICCpred <- inner_join(CCAPSappt_long, CLICC_long)
 
 n_distinct(Outcomes_CLICCpred$UniqueClientID) # n = 39903
 
@@ -480,8 +568,11 @@ OutPredApp <- inner_join(Outcomes_SDSpred, CLICC_long)
 
 n_distinct(OutPredApp$UniqueClientID) # n = 38621
 
-rm(CCAPSappt_cuts, CLICC, CLICC_long, CLICC_slice, SDS, SDS_slice, TI1719_courses)
+rm(CCAPSappt_cuts, CLICC, CLICC_long, SDS, Outcomes_SDSpred, CCAPSappt, CCAPSappt_long)
 
+
+### Last but not least, save final dataset as an Rda
+save(OutPredApp, file = "CCMH_Outcome_Prediction/prediction_app_data.rda")
 
 
 

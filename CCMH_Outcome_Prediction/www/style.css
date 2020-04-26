@@ -1,0 +1,12 @@
+.tabbable > .nav > li > a {background-color: #d1e0e0;  color:#476b6b; text-decoration: none;}
+    .tabbable > .nav > li[class=active] > a {background-color: #67999a; color:white; border-color:#67999a; text-decoration: none; }
+    .tabbable > .nav > li > a:hover {background-color: #c2d6d6; color:#476b6b; border-color:#ECF0F1; text-decoration: underline;}
+    .tabbable > .nav > li[class=active] > a:hover {background-color: #67999a; color:white; border-color:#67999a; text-decoration: none}
+
+.fa-info-circle {color:#2C3E50}
+.nav > li > a {padding: 8px 10px;}
+
+h1, .h1, h2, .h2, h3, .h3 {
+  margin-top: 8px;
+  margin-bottom: 8px;
+}
