@@ -7,6 +7,22 @@
 # Natalie Pottschmidt
 #
 
+# Dear Natalie,
+# 
+# This app is great. First, it works as intended, and you have implemented some complex
+# logic along the way--handling one vs. two predictor variables. You customized the look
+# and feel, and you've added useful summary features to the plots. I'll be curious to
+# hear what sort of feedback you get as users start to interact with the app.
+# My question would be whether it's possible to make some of the individual plots
+# bigger in order to see the trends. But since this is an app you intend to put into
+# production, let your user community provide you feedback.
+# 
+# Keep coding! These skills, like any, require practice. So take what you've learned
+# and keep at it.
+# 
+# Rick
+
+
 library(shiny)
 library(tidyverse)
 library(shinythemes)
